@@ -1,0 +1,209 @@
+DROP TABLE IF EXISTS Record;
+DROP TABLE IF EXISTS Users;
+DROP TABLE IF EXISTS Morph;
+DROP TABLE IF EXISTS Contact;
+DROP TABLE IF EXISTS DNA;
+DROP TABLE IF EXISTS Tag;
+DROP TABLE IF EXISTS Photo;
+DROP TABLE IF EXISTS Animal;
+
+
+#Create tables
+
+CREATE TABLE IF NOT EXISTS Animal(
+Animal_id INT,
+Animal_name VARCHAR(30),
+Sex VARCHAR(20),
+Notes VARCHAR(200),
+Age VARCHAR(20),
+Gen_Location VARCHAR(30),
+PRIMARY KEY (Animal_id)
+);
+
+CREATE TABLE IF NOT EXISTS Photo(
+Photo_id INT NOT NULL AUTO_INCREMENT,
+Animal_id INT,
+Photo VARCHAR(30),
+Profile VARCHAR(10),
+PRIMARY KEY (Photo_id),
+FOREIGN KEY (Animal_id) REFERENCES Animal (Animal_id)
+);
+
+
+CREATE TABLE IF NOT EXISTS Tag(
+Tag_id INT NOT NULL AUTO_INCREMENT,
+Animal_id INT,
+Tagged VARCHAR(10),
+Pit_tag VARCHAR(30),
+Tag_date VARCHAR(30),
+PRIMARY KEY (Tag_id),
+FOREIGN KEY (Animal_id) REFERENCES Animal (Animal_id)
+);
+
+CREATE TABLE IF NOT EXISTS DNA(
+DNA_id INT NOT NULL AUTO_INCREMENT,
+Animal_id INT,
+DNA VARCHAR(10),
+No_DNASample VARCHAR(30),
+DNA_taken VARCHAR(30),
+PRIMARY KEY (DNA_id),
+FOREIGN KEY (Animal_id) REFERENCES Animal (Animal_id)
+);
+
+CREATE TABLE IF NOT EXISTS Contact(
+Cont_id INT,
+Animal_id INT NOT NULL,
+Cont_date VARCHAR(30),
+Cont_time VARCHAR(30),
+Cont_type VARCHAR(10),
+Cont_lat VARCHAR(30),
+Cont_long VARCHAR(30),
+Cont_location VARCHAR(30),
+PRIMARY KEY (Cont_id),
+FOREIGN KEY (Animal_id) REFERENCES Animal(Animal_id)
+);
+
+CREATE INDEX ANIMAL_NDX ON Contact (Animal_id);
+
+CREATE TABLE IF NOT EXISTS Morph(
+Morph_id INT AUTO_INCREMENT,
+Animal_id INT,
+Cont_id INT,
+Torso VARCHAR(10),
+Jaw VARCHAR(10),
+Tail VARCHAR(10),
+Weight VARCHAR(10),
+Morphology VARCHAR(10),
+PRIMARY KEY (Morph_id),
+FOREIGN KEY (Cont_id) REFERENCES Contact (Cont_id)
+);
+
+CREATE TABLE IF NOT EXISTS Users(
+User_initial VARCHAR(10),
+User_name VARCHAR(30),
+PRIMARY KEY (User_initial)
+);
+INSERT INTO Users (User_initial, User_name) VALUES ('CF', 'Celine Frere');
+INSERT INTO Users (User_initial, User_name) VALUES ('SF', 'Sinta Frere');
+INSERT INTO Users (User_initial, User_name) VALUES ('CP', 'Carme Piza Roca');
+INSERT INTO Users (User_initial, User_name) VALUES ('BL', 'Bethan Littleford');
+INSERT INTO Users (User_initial, User_name) VALUES ('DN', 'Dan Nugent');
+INSERT INTO Users (User_initial, User_name) VALUES ('EP', 'Evie P');
+INSERT INTO Users (User_initial, User_name) VALUES ('HM', 'Harry McDonald');
+INSERT INTO Users (User_initial, User_name) VALUES ('KS', 'Kasha Strickland');
+INSERT INTO Users (User_initial, User_name) VALUES ('NK', 'Nicola Kent');
+INSERT INTO Users (User_initial, User_name) VALUES ('RG', 'Riana Gardiner');
+INSERT INTO Users (User_initial, User_name) VALUES ('SB', 'Sarah Ball');
+INSERT INTO Users (User_initial, User_name) VALUES ('ED', 'Eric Doran');
+INSERT INTO Users (User_initial, User_name) VALUES ('UQ', 'University Qld Student');
+INSERT INTO Users (User_initial, User_name) VALUES ('NP', 'Nicola Peterson');
+INSERT INTO Users (User_initial, User_name) VALUES ('V', 'Volunteer');
+
+
+CREATE UNIQUE INDEX User_NDX1 ON Users (User_initial);
+
+
+
+CREATE TABLE IF NOT EXISTS Record (
+    Record_id INT NOT NULL AUTO_INCREMENT,
+    Cont_id INT,
+    Field_record VARCHAR(30),
+    Data_record VARCHAR(30),
+    Photo_id VARCHAR(30),
+    PRIMARY KEY (Record_id),
+    FOREIGN KEY (Cont_id)
+        REFERENCES Contact (Cont_id)
+);
+
+#Create view for animals with 25 or more contacts and DNA
+DROP VIEW Animal_contact;
+
+CREATE VIEW Animal_contact AS
+SELECT Animal_id, COUNT(*) as NumberOfContact
+FROM Contact
+GROUP BY Animal_id
+HAVING  COUNT(*) >=25
+ORDER BY COUNT(*) DESC;
+
+SELECT Animal_contact.Animal_id, Animal.Animal_name FROM Animal_contact, Animal
+WHERE Animal_contact.Animal_id = Animal.Animal_id;
+
+#Create view for number of morphologies per animal
+DROP VIEW Animal_morph;
+
+CREATE VIEW Animal_morph AS
+SELECT Animal_id, COUNT(Morphology = TRUE) as NumberOfMorph
+FROM Morph
+GROUP BY Animal_id
+ORDER BY COUNT(*) DESC;
+
+
+
+SELECT Animal_morph.Animal_id, Animal.Animal_name, Animal_morph.NumberOfMorph FROM Animal_morph, Animal
+WHERE Animal_morph.Animal_id = Animal.Animal_id;
+
+#Create Procedure for Animal with the greatest number of contacts
+DROP PROCEDURE IF EXISTS getGreatestAnimal;
+DELIMITER \\
+
+CREATE PROCEDURE getGreatestAnimal(
+    OUT GreatestAni VARCHAR(100))
+BEGIN
+	DECLARE Ani_id INT;
+    DECLARE NumOfContact INT;
+	
+	
+	SELECT Animal_id, COUNT(*) INTO Ani_id, NumOfContact
+	FROM contact
+	GROUP BY Animal_id
+	HAVING COUNT(*)=
+    (SELECT MAX(c) FROM (SELECT COUNT(*) AS c FROM Contact GROUP BY Animal_id )t1)
+	ORDER BY COUNT(*) DESC LIMIT 1;
+    
+    
+     
+   
+    
+	SET GreatestAni := CONCAT('Animal ID:', Ani_id, ' is the Animal with', ' ', NumOfContact,'times contacted');
+	
+
+END\\
+DELIMITER ;
+
+call getGreatestAnimal(@GreatestAnimal);
+select @GreatestAnimal;
+
+
+#Create Procedure for Animal with the greatest number of morphologies
+DROP PROCEDURE IF EXISTS getGreatestMorph;
+DELIMITER \\
+
+CREATE PROCEDURE getGreatestMorph(
+    OUT GreatestMorph VARCHAR(100))
+BEGIN
+	DECLARE Ani_ide INT;
+    DECLARE NumOfMorph INT;
+	
+	SELECT Animal_id, COUNT(Morphology = TRUE) INTO Ani_ide, NumOfMorph
+	FROM Morph
+	GROUP BY Animal_id
+	HAVING COUNT(Morphology = TRUE)=
+    (SELECT MAX(c) FROM (SELECT COUNT(Morphology = TRUE) AS c FROM Morph GROUP BY Animal_id )t1)
+	ORDER BY COUNT(Morphology = TRUE) DESC LIMIT 1;
+    
+    
+     
+   
+    
+	SET GreatestMorph := CONCAT('Animal ID:', Ani_ide, ' has', ' ', NumOfMorph,' Morphologies');
+    
+
+END\\
+DELIMITER ;
+
+call getGreatestMorph(@GreatestMorph);
+select @GreatestMorph;
+
+
+
+
