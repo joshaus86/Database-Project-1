@@ -1,0 +1,153 @@
+import os
+import webbrowser
+import mysql.connector
+from mysql.connector import Error
+
+contactsid = []
+contactsname = []
+morphid = []
+morphname = []
+morphnum = []
+
+def Animal_contact():
+    try:
+        connection = mysql.connector.connect(
+            host="127.0.0.1",
+            user="root",
+            passwd="korea1",
+            db="partb")
+        
+        cursor = connection.cursor()
+        cursor.execute("SELECT Animal_contact.Animal_id, Animal.Animal_name FROM Animal_contact, Animal WHERE Animal_contact.Animal_id = Animal.Animal_id")
+        rows = [list(i) for i in cursor.fetchall()]
+
+
+        for row in rows:
+            contactsid.append(row[0])
+            contactsname.append(row[1])
+
+    except mysql.connector.Error as error:
+        print("Failed to call view from MySQL: {}".format(error))
+
+    finally:
+        if (connection.is_connected()):
+            cursor.close()
+            connection.close()
+            print("MySQL connection is closed")
+
+Animal_contact()
+
+def Animal_morph():
+    try:
+        connection = mysql.connector.connect(
+            host="127.0.0.1",
+            user="root",
+            passwd="korea1",
+            db="partb")
+
+        cursor = connection.cursor()
+        cursor.execute("SELECT Animal_morph.Animal_id, Animal.Animal_name, Animal_morph.NumberOfMorph FROM Animal_morph, Animal WHERE Animal_morph.Animal_id = Animal.Animal_id;")
+        rows = cursor.fetchall()
+
+        for row in rows:
+            morphid.append(row[0])
+            morphname.append(row[1])
+            morphnum.append(row[2])
+
+    except mysql.connector.Error as error:
+        print("Failed to call view from MySQL: {}".format(error))
+
+    finally:
+        if (connection.is_connected()):
+            cursor.close()
+            connection.close()
+            print("MySQL connection is closed")
+
+Animal_morph()
+
+
+def getGreatest():
+    try:
+        connection = mysql.connector.connect(
+            host="127.0.0.1",
+            user="root",
+            passwd="korea1",
+            db="partb")
+        
+        cursor = connection.cursor()
+        
+        args = [0]
+        result_args = cursor.callproc('getGreatestAnimal', args)
+
+        global cont_proc
+        cont_proc = result_args[0]
+        
+
+
+    except mysql.connector.Error as error:
+        print("Failed to execute stored procedure: {}".format(error))
+
+    finally:
+        if (connection.is_connected()):
+            cursor.close()
+            connection.close()
+            print("MySQL connection is closed")
+
+getGreatest()
+
+def getGreatestMorph():
+    try:
+        connection = mysql.connector.connect(
+            host="127.0.0.1",
+            user="root",
+            passwd="korea1",
+            db="partb")
+        
+        cursor = connection.cursor()
+        
+        args = [0]
+        result_args = cursor.callproc('getGreatestMorph', args)
+
+        global morph_proc
+        morph_proc = result_args[0]
+        
+
+
+    except mysql.connector.Error as error:
+        print("Failed to execute stored procedure: {}".format(error))
+
+    finally:
+        if (connection.is_connected()):
+            cursor.close()
+            connection.close()
+            print("MySQL connection is closed")
+
+getGreatestMorph()
+
+
+def nlist_to_html(list2d):
+	#bold header
+	htable=u'<table border="1" bordercolor=000000 cellspacing="0" cellpadding="1" style="table-layout:fixed;vertical-align:bottom;font-size:13px;font-family:verdana,sans,sans-serif;border-collapse:collapse;border:1px solid rgb(130,130,130)" >'
+	list2d[0] = [u'<b>' + i + u'</b>' for i in list2d[0]] 
+	for row in list2d:
+		newrow = u'<tr>' 
+		newrow += u'<td align="left" style="padding:1px 4px">'+unicode(row[0])+u'</td>'
+		row.remove(row[0])
+		newrow = newrow + ''.join([u'<td align="right" style="padding:1px 4px">' + unicode(x) + u'</td>' for x in row])  
+		newrow += '</tr>' 
+		htable+= newrow
+	htable += '</table>'
+	return htable
+
+def sql_html(query):
+	return nlist_to_html(Animal_contact())
+
+html = 'htable'
+
+#html = '<html><head><title>The eastern water dragon project</title><body><h1>Animal with the greatest number of contacts</h1>{}<h1>Animal with the greatest number of morphologies</h1>{}<h1>Animal with more than 25 times contacts list</h1><table><tr><th>Animal ID</th><th>Animal Name</th><tr><td>{}</td><td>{}</td><br></table><h1>Number of morphologies per animal</h1><table><tr><th>Animal ID</th><th>Animal Name</th><th>Number of Morphologies</th><tr><td>{}<br></td><td>{}<br></td><td>{}<br></td></body> </head> </html>'.format(cont_proc, morph_proc, contactsid, contactsname, morphid, morphname, morphnum)
+path = os.path.abspath('1107954_SANGHYEON_CHO_ICT320.html')
+url = 'file://' + path
+
+with open(path, 'w') as f:
+    f.write(html)
+webbrowser.open(url)
